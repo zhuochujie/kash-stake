@@ -6,25 +6,25 @@ import "../../src/interface/IMine.sol";
 contract Mine is IMine {
     mapping(address => uint256) balance;
 
-    event Deposit(address user, uint256 amount);
-    event Withdraw(address user, uint256 amount);
-    event GetReward(address user, uint256 amount);
+    event Deposit(uint256 id, address user, uint256 amount, address ref);
+    event Withdraw(uint256 id, address user, uint256 amount);
+    event GetReward(uint256 id, address user, uint256 amount);
 
-    function deposit(address user, uint256 amount) external override {
+    function deposit(uint256 id, address user, uint256 amount, address ref) external override {
         balance[user] += amount;
-        emit Deposit(user, amount);
+        emit Deposit(id, user, amount, ref);
     }
 
-    function withdraw(address user, uint256 amount) external override {
+    function withdraw(uint256 id, address user, uint256 amount) external override {
         balance[user] -= amount;
-        emit Withdraw(user, amount);
+        emit Withdraw(id, user, amount);
     }
 
-    function getReward(address user) external override {
-        emit GetReward(user, reward(user));
+    function getReward(uint256 id, address user) external override {
+        emit GetReward(id, user, reward(id, user));
     }
 
-    function reward(address user) public view override returns (uint256) {
-        return balance[user] * 2;
+    function reward(uint256 id, address user) public view override returns (uint256) {
+        return balance[user] * id;
     }
 }

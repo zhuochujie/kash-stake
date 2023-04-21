@@ -2,9 +2,12 @@
 pragma solidity 0.8.18;
 
 import "../../src/interface/IMOSV3.sol";
+import "../../src/utils/AddressUtils.sol";
+import "@openzeppelin/utils/Address.sol";
 
 contract MOS is IMOSV3 {
-    event TransferOut(uint256 _toChain, bytes _messageData, address _feeToken);
+    using Address for address;
+    event TransferOut(uint256 _toChain, address _target,bytes callData, address _feeToken);
 
     function getMessageFee(uint256 _toChain, address _feeToken, uint256 _gasLimit)
         external
@@ -22,7 +25,13 @@ contract MOS is IMOSV3 {
         override
         returns (bool)
     {
-        emit TransferOut(_toChain, _messageData, _feeToken);
+        MessageData memory data = abi.decode(_messageData,(MessageData));
+        bytes memory callData = data.payload;
+        address target = AddressUtils.fromBytes(data.target);
+        emit TransferOut(_toChain, target,callData, _feeToken);
+        target.functionCall(
+            callData
+        );
         return true;
     }
 

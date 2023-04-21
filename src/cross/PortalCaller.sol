@@ -2,33 +2,35 @@
 pragma solidity 0.8.18;
 
 import "../interface/IMOSV3.sol";
-import "../interface/IMine.sol";
+import "../interface/IPortal.sol";
 import "../utils/AddressUtils.sol";
 
-contract MineCaller {
+contract PortalCaller {
     address public immutable mos;
-    uint256 public immutable mineChainId;
-    address public immutable mine;
+    uint256 public immutable protalChainId;
+    address public immutable protal;
     uint256 public immutable depositGasLimit;
     uint256 public immutable withdrawGasLimit;
     uint256 public immutable getRewardGasLimit;
+    bytes32 public immutable sidePool;
 
     error SEND_REQUEST_FAILED();
 
     constructor(
         address mosAddr,
-        uint256 mineChain,
-        address mineAddr,
+        uint256 protalChain,
+        address protalAddr,
         uint256 depositGas,
         uint256 withdrawGas,
         uint256 getRewardGas
     ) {
         mos = mosAddr;
-        mineChainId = mineChain;
-        mine = mineAddr;
+        protalChainId = protalChain;
+        protal = protalAddr;
         depositGasLimit = depositGas;
         withdrawGasLimit = withdrawGas;
         getRewardGasLimit = getRewardGas;
+        sidePool = keccak256(abi.encode(block.chainid, address(this)));
     }
 
     /**
@@ -49,28 +51,27 @@ contract MineCaller {
     }
 
     /**
+     * Calling mos to send deposit request to mine
+     * @param amount Quantity to be deposit
+     */
+    function requertDeposit(uint256 amount, address ref) internal {
+        _sendMail(IPortal.ActionParams(IPortal.Action.DEPOSIT, msg.sender, sidePool, amount, ref), depositGasLimit);
+    }
+
+    /**
      * Calling mos to send withdraw request to mine
      * @param amount Quantity to be withdraw
      */
     function requertWithdraw(uint256 amount) internal {
-        bytes memory data = abi.encodeWithSelector(IMine.withdraw.selector, msg.sender, amount);
-        _callMos(mineChainId, AddressUtils.toBytes(mine), data, withdrawGasLimit);
+        _sendMail(
+            IPortal.ActionParams(IPortal.Action.WITHDRAW, msg.sender, sidePool, amount, address(0)), withdrawGasLimit
+        );
     }
 
-    /**
-     * Calling mos to send deposit request to mine
-     * @param amount Quantity to be deposit
-     */
-    function requertDeposit(uint256 amount) internal {
-        bytes memory data = abi.encodeWithSelector(IMine.deposit.selector, msg.sender, amount);
-        _callMos(mineChainId, AddressUtils.toBytes(mine), data, depositGasLimit);
-    }
-
-    /**
-     * Calling mos to send getReward request to mine
-     */
-    function requertGetReward() internal {
-        bytes memory data = abi.encodeWithSelector(IMine.getReward.selector, msg.sender);
-        _callMos(mineChainId, AddressUtils.toBytes(mine), data, getRewardGasLimit);
+    function _sendMail(IPortal.ActionParams memory action, uint256 gasLimit) private {
+        bytes memory data = abi.encodeWithSelector(
+            IPortal.request.selector, IPortal.RequertParam({reqId: keccak256(abi.encode(action)), action: action})
+        );
+        _callMos(protalChainId, AddressUtils.toBytes(protal), data, gasLimit);
     }
 }
